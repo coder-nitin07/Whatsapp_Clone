@@ -3,6 +3,7 @@ const dbConnection = require('./config/db');
 const { authRouter } = require('./routes/authRoutes');
 const { userRouter } = require('./routes/userRoutes');
 const { chatRouter } = require('./routes/chatRoutes');
+const { messsageRouter } = require('./routes/messageRoutes');
 const app = express();
 require('dotenv').config();
 
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/auth', authRouter);
 app.use('/user', userRouter);
 app.use('/chat', chatRouter);
+app.use('/message', messsageRouter);
 
 app.get('/', (req, res)=>{
     res.send('Whatsapp Clone');
