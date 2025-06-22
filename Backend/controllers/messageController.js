@@ -27,4 +27,24 @@ const sendMessage = async (req, res)=>{
     }
 };
 
-module.exports = { sendMessage };
+// Get Messages
+const getMessages = async (req, res)=>{
+    try {
+        const { chatId } = req.params;
+
+        const getMessages = await Message.find({ chat: chatId })
+                            .populate('sender', 'name email')
+                            .sort();
+
+        if(getMessages.length === 0){
+            return res.status(404).json({ message: 'No Messages found for this chat.' });
+        }
+
+        res.status(200).json({ message: 'Messages Fetched Successfully', messages: getMessages });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+module.exports = { sendMessage, getMessages };
