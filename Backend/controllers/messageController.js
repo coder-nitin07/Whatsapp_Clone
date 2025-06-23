@@ -47,4 +47,27 @@ const getMessages = async (req, res)=>{
     }
 };
 
-module.exports = { sendMessage, getMessages };
+// Seen messages
+const seenMessages = async (req, res)=>{
+    try {
+        const { messageId } = req.body;
+        const message = await Message.findById(messageId);
+        if(!message){
+            return res.status(404).json({ message: 'Message not found' });
+        }
+
+        const hasSeen = message.seenBy.includes(req.user._id.toString());
+
+        if(!hasSeen){
+            message.seenBy.push(req.user._id);
+            await message.save();
+        }
+        
+        res.status(200).json({ message: 'Message Seen successfully', message: hasSeen });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+module.exports = { sendMessage, getMessages, seenMessages };
