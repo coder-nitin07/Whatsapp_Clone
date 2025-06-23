@@ -1,5 +1,7 @@
 const Chat = require("../models/chatSchema");
 const { Message } = require("../models/messageSchema");
+const User = require("../models/userSchema");
+const { createChat } = require("./chatController");
 
 // Send Message API
 const sendMessage = async (req, res)=>{
@@ -70,4 +72,80 @@ const seenMessages = async (req, res)=>{
     }
 };
 
-module.exports = { sendMessage, getMessages, seenMessages };
+// Access All Chats
+const accessChats = async (req, res)=>{
+    try {
+        const { userIds, isGroupChat, chatName } = req.body;
+        const loggedInUserId = req.user._id;
+
+        if(!userIds || !Array.isArray(userIds) || userIds.length === 0){
+            return res.status(400).json({ message: 'User list is required' });
+        }
+
+        // Ensure logged-in user is part of the chat
+        const allUsers = [...userIds, loggedInUserId];
+
+        // 1 to 1 chat
+        if(!isGroupChat && userIds.length === 1){
+            const existingChat = await Chat.findOne({
+                isGroupChat: false,
+                users: { $all: [ loggedInUserId, userIds[0] ], $size: 2 },
+            }).populate('users', '-password');
+
+            if(existingChat){
+                return res.status(200).json({ message: '1-to-1 Chat Already Exists', chat: existingChat });
+            }
+
+            const otherUser = await User.findById(userIds[0]);
+            const newChat = await Chat.create({
+                chatName: otherUser.name,
+                isGroupChat: false,
+                users: [ loggedInUserId, userIds[0] ],
+            });
+
+            return res.status(201).json({ message: '1-to-1 Chat created', chat: newChat });
+        }
+
+        // Group chat
+        if(isGroupChat){
+            if(!chatName || userIds.length < 2){
+                return res.status(400).json({ message: 'Group Chat required a name and at least 3 memebers' });
+            }
+
+            const groupChat = await Chat.create({
+                chatName,
+                users: allUsers,
+                isGroupChat: true,
+                groupAdmin: loggedInUserId
+            });
+
+            return res.status(201).json({ message: 'Group chat created', chat: groupChat });
+        } 
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+// Fetch all Chats of login
+const fetchAllChats = async (req, res)=>{
+    try {
+        const loggedUser = req.user._id;
+
+        const getChats = await Chat.find({ users: loggedUser })
+                        .populate('users', '-password')
+                        .populate('latestMessage')
+                        .sort({ updatedAt: -1 });
+                        
+        if(getChats.length == 0){
+            return res.status(200).json({ message: 'No Chat Found' });
+        }
+
+        res.status(200).json({ message: 'Chat Fetched Successfully', chats: getChats });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+module.exports = { sendMessage, getMessages, seenMessages, createChat, accessChats, fetchAllChats };
