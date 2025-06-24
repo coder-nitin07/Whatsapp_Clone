@@ -127,8 +127,8 @@ const accessChats = async (req, res)=>{
     }
 };
 
-// Fetch all Chats of login
-const fetchAllChats = async (req, res)=>{
+// Fetch all Chats  for the sidebar (latest message)
+const getRecentChats = async (req, res)=>{
     try {
         const loggedUser = req.user._id;
 
@@ -148,4 +148,25 @@ const fetchAllChats = async (req, res)=>{
     }
 };
 
-module.exports = { sendMessage, getMessages, seenMessages, createChat, accessChats, fetchAllChats };
+// Fetch All message of a Room
+const fetchAllMessages = async (req, res)=>{
+    try {
+        const { roomId } = req.params;
+
+        const existingChatRoom = await Chat.findById( roomId );
+        if(!existingChatRoom){
+            return res.status(400).json({ message: 'Chat Room not found' });
+        }
+
+        const messages = await Message.find({ chat: roomId })
+                            .populate('sender', 'name email')
+                            .populate('chat');
+
+        res.status(200).json({ message: 'Room chats fetched successfylly', chats: messages });
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: 'Something went wrong' });
+    }
+};
+
+module.exports = { sendMessage, getMessages, seenMessages, createChat, accessChats, getRecentChats, fetchAllMessages };
